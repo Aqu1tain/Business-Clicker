@@ -1,4 +1,3 @@
-# game.py
 import pygame
 import sys
 import os
@@ -31,7 +30,7 @@ class BusinessClicker:
         self.score_multiplier = 1.0
         self.combo_counter = 0
         self.last_click_time = 0
-        self.combo_timeout = 2000  # 2 secondes pour maintenir le combo
+        self.combo_timeout = 1000  # En millisecondes
         
         # Configuration de l'interface
         self.font_large = pygame.font.Font(None, 64)
@@ -86,9 +85,8 @@ class BusinessClicker:
         # Chargement des ressources et configuration UI
         self.load_assets()
         self.setup_ui()
-        
         self.load_music()
-        self.load_game()
+        self.load_game() # Si il y a une sauvegarde
 
 
     def load_music(self):
@@ -96,7 +94,7 @@ class BusinessClicker:
             pygame.mixer.music.load(os.path.join('assets', 'music', 'background_music.mp3'))
             pygame.mixer.music.set_volume(self.music_volume)
             if self.music_enabled:
-                pygame.mixer.music.play(-1)  # -1 pour loop infini
+                pygame.mixer.music.play(-1)  # -1 pour un loop infini
         except:
             print("Erreur lors du chargement de la musique")
 
@@ -107,7 +105,6 @@ class BusinessClicker:
         else:
             pygame.mixer.music.stop()
         
-        # Mettre à jour le texte du menu
         self.pause_menu_options[1] = f"Musique: {'On' if self.music_enabled else 'Off'}"
 
     def toggle_sound(self):
@@ -117,7 +114,6 @@ class BusinessClicker:
         else:
             self.click_sound.set_volume(0)
         
-        # Mettre à jour le texte du menu
         self.pause_menu_options[2] = f"Sons: {'On' if self.sound_enabled else 'Off'}"
 
     def adjust_volume(self, increase=True):
@@ -131,27 +127,25 @@ class BusinessClicker:
         pygame.mixer.music.set_volume(self.music_volume)
         self.click_sound.set_volume(self.sound_volume if self.sound_enabled else 0)
 
-
     def draw_pause_menu(self):
         if not self.paused:
             return
-        # Fond semi-transparent
+        # Fond noir-transparent
         overlay = pygame.Surface((self.width, self.height))
         overlay.fill((0, 0, 0))
-        overlay.set_alpha(128)
+        overlay.set_alpha(128) # transparence
         self.screen.blit(overlay, (0, 0))
         
         # Titre du menu
-        title_text = self.font_large.render("PAUSE", True, (255, 255, 255))
+        title_text = self.font_large.render("BUSINES SCLICKER", True, (255, 255, 255))
         title_rect = title_text.get_rect(center=(self.width // 2, self.height // 4))
         self.screen.blit(title_text, title_rect)
         
         # Options du menu
         for i, option in enumerate(self.pause_menu_options):
-            # Modification de la couleur si l'option est sélectionnée ou survolée
-            color = (255, 255, 0)  # Couleur par défaut pour l'option sélectionnée
+            color = (255, 255, 0)  # Jaune par défaut
             if i == self.selected_option:
-                color = (255, 255, 0)  # Jaune pour l'option sélectionnée
+                color = (255, 255, 0)  # Jaune
             else:
                 mouse_pos = pygame.mouse.get_pos()
                 option_rect = pygame.Rect(
@@ -161,7 +155,7 @@ class BusinessClicker:
                     50
                 )
                 if option_rect.collidepoint(mouse_pos):
-                    color = (200, 200, 0)  # Jaune plus clair pour le survol
+                    color = (200, 200, 0)  # Jaune plus moche pour le survol
                 else:
                     color = (255, 255, 255)  # Blanc pour les options non sélectionnées
             
@@ -170,29 +164,16 @@ class BusinessClicker:
                 center=(self.width // 2, self.height // 2 + i * 50)
             )
             self.screen.blit(option_text, option_rect)
-            
-        # Ajout d'instructions
-        instructions_text = self.font_small.render(
-            "Utilisez les flèches ↑↓ et Entrée, ou cliquez avec la souris",
-            True,
-            (200, 200, 200)
-        )
-        instructions_rect = instructions_text.get_rect(
-            center=(self.width // 2, self.height - 50)
-        )
-        self.screen.blit(instructions_text, instructions_rect)
-
-
 
     def handle_pause_input(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
-                self.selected_option = (self.selected_option - 1) % len(self.pause_menu_options)
+                self.selected_option = (self.selected_option - 1) % len(self.pause_menu_options) # Modulo pour ne pas depasser le nombre d'options
             elif event.key == pygame.K_DOWN:
-                self.selected_option = (self.selected_option + 1) % len(self.pause_menu_options)
+                self.selected_option = (self.selected_option + 1) % len(self.pause_menu_options) # Same
             elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                 self.execute_menu_option()
-        elif event.type == pygame.MOUSEBUTTONDOWN:  # Ajout du support de la souris
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Clic gauche
                 mouse_pos = pygame.mouse.get_pos()
                 # Calcul de la position des options du menu
@@ -206,7 +187,6 @@ class BusinessClicker:
                     if option_rect.collidepoint(mouse_pos):
                         self.selected_option = i
                         self.execute_menu_option()
-
 
     def execute_menu_option(self):
         option = self.pause_menu_options[self.selected_option]
@@ -232,14 +212,17 @@ class BusinessClicker:
             Upgrade("Stagiaire", 50, 0.5, "Il fait de son mieux..."),
             Upgrade("Ordinateur de Bureau", 200, 2, "Traitement des dossiers plus rapide"),
             Upgrade("Scanner Automatique", 1000, 10, "Scanne les documents tout seul"),
-            Upgrade("Assistant IA", 5000, 50, "Productivité nouvelle génération")
+            Upgrade("Assistant IA", 5000, 50, "Productivité nouvelle génération"),
+            Upgrade("Bureau Privé", 10000, 100, "Un espace rien que pour vous"),
+            Upgrade("Secrétaire Personnel", 20000, 200, "Gère vos rendez-vous et appels"),
+            Upgrade("Jet Privé", 100000, 1000, "Voyages d'affaires en un clin d'œil"),
         ]
 
     def load_assets(self):
         self.background = pygame.image.load(os.path.join('assets', 'images', 'office_background.png'))
         self.background = pygame.transform.scale(self.background, (self.width, self.height))
         
-        document_size = int(self.height * 0.15)
+        document_size = int(self.height * 0.20)
         original_document = pygame.image.load(os.path.join('assets', 'images', 'document_pixel.png'))
         self.document = pygame.transform.scale(original_document, (document_size, document_size))
         self.document_rect = self.document.get_rect(center=(self.width // 2, self.height // 2))
@@ -273,8 +256,7 @@ class BusinessClicker:
 
 
     def check_promotion(self):
-        # On cherche le plus haut poste débloqué au lieu de prendre le premier qui dépasse
-        highest_position = self.current_position
+        highest_position = self.current_position # Plus haut poste
         for position, threshold in sorted(self.promotion_levels.items(), key=lambda x: x[1]):
             if self.money >= threshold:
                 highest_position = position
@@ -295,11 +277,13 @@ class BusinessClicker:
         if priority == 'story':
             duration = 10000
         elif priority == 'random':
-            duration = 3000
+            duration = 2000
             for msg in self.messages_queue:
                 if msg['priority'] == 'random' and \
-                   current_time - msg['creation_time'] < msg['duration']:
+                current_time - msg['creation_time'] < msg['duration']:
                     return
+        elif priority == "achievement":
+            duration = 10000
 
         for msg in self.messages_queue:
             if msg['title'] == title and msg['description'] == description:
@@ -317,7 +301,7 @@ class BusinessClicker:
             self.messages_queue.append(new_message)
         elif priority == 'random':
             self.messages_queue = [msg for msg in self.messages_queue 
-                                 if msg['priority'] != 'random']
+                                if msg['priority'] != 'random']
             self.messages_queue.append(new_message)
             
         if len(self.messages_queue) > 5:
@@ -337,7 +321,7 @@ class BusinessClicker:
     def update_messages(self):
         current_time = pygame.time.get_ticks()
         self.messages_queue = [msg for msg in self.messages_queue 
-                            if current_time - msg['creation_time'] < msg['duration']][:5]
+                            if current_time - msg['creation_time'] < msg['duration']][:5] # Ne garder que les 5 derniers messages, en supprimant ceux qui sont trop vieux
 
     def check_story_events(self):
         for event in self.story_events:
@@ -373,7 +357,7 @@ class BusinessClicker:
 
     def create_particles(self, pos, count=5):
         current_time = pygame.time.get_ticks()
-        gain_text = f"+{self.click_value * self.score_multiplier:.1f}€"
+        gain_text = f"+{self.click_value * self.score_multiplier:.1f}€" # 1f = 1 chiffre après la virgule
         
         new_particles = []
         for _ in range(count):
@@ -434,6 +418,7 @@ class BusinessClicker:
                 self.try_purchase_upgrade(upgrade)
 
     def try_purchase_upgrade(self, upgrade):
+        # Vérifier si l'utilisateur a assez d'argent
         if self.money >= upgrade.cost:
             self.money -= upgrade.cost
             upgrade.count += 1
@@ -488,7 +473,7 @@ class BusinessClicker:
         if not self.messages_queue:
             return
 
-        msg = self.messages_queue[-1]
+        msg = self.messages_queue[-1] # Dernier message
         margin = 20
         padding = 10
         max_width = 800
@@ -745,8 +730,3 @@ class BusinessClicker:
         self.save_game()
         pygame.quit()
         sys.exit()
-
-
-if __name__ == "__main__":
-    game = BusinessClicker()
-    game.run()

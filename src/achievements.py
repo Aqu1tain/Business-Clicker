@@ -11,6 +11,13 @@ class Achievement:
 
 ACHIEVEMENTS = [
     Achievement(
+        "Débutant",
+        "Cliquez 10 fois",
+        "clicks",
+        10,
+        50.0
+    ),
+    Achievement(
         "Travailleur Acharné",
         "Cliquez 1000 fois",
         "clicks",
