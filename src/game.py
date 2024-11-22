@@ -103,29 +103,36 @@ class BusinessClicker:
                 self.upgrade_icons[upgrade.name] = icon
 
     def setup_ui(self):
-        self.upgrade_region = pygame.Rect(self.width - 300, 0, 300, self.height)
+        self.upgrade_region = pygame.Rect(self.width - 400, 0, 400, self.height)  # Largeur augmentée à 400
         self.stats_region = pygame.Rect(0, 0, 300, 100)
         
         self.upgrade_buttons = []
         for i, upgrade in enumerate(self.upgrades):
             button_rect = pygame.Rect(
                 self.upgrade_region.x + 10,
-                100 + i * 70,
-                280,
-                60
+                100 + i * 90,
+                380,
+                80
             )
             self.upgrade_buttons.append((button_rect, upgrade))
 
+
     def check_promotion(self):
+        # On cherche le plus haut poste débloqué au lieu de prendre le premier qui dépasse
+        highest_position = self.current_position
         for position, threshold in sorted(self.promotion_levels.items(), key=lambda x: x[1]):
-            if self.money >= threshold and position != self.current_position:
-                self.current_position = position
-                self.add_message(
-                    f"Promotion !",
-                    f"Félicitations ! Vous êtes promu {position}. Nouveaux avantages débloqués !"
-                )
-                return True
+            if self.money >= threshold:
+                highest_position = position
+                
+        if highest_position != self.current_position:
+            self.current_position = highest_position
+            self.add_message(
+                f"Promotion !",
+                f"Félicitations ! Vous êtes promu {highest_position}. Nouveaux avantages débloqués !"
+            )
+            return True
         return False
+
 
     def add_message(self, title, description, duration=5000, priority='normal'):
         current_time = pygame.time.get_ticks()
@@ -385,27 +392,30 @@ class BusinessClicker:
         self.screen.blit(title_text, (self.upgrade_region.x + 10, 50))
         
         for button, upgrade in self.upgrade_buttons:
+            # Couleur de fond en fonction de la possibilité d'achat
             color = (200, 200, 200) if self.money >= upgrade.cost else (150, 150, 150)
             pygame.draw.rect(self.screen, color, button, border_radius=5)
             
+            # Icône
             icon = self.upgrade_icons[upgrade.name]
             icon_rect = icon.get_rect(midleft=(button.x + 10, button.centery))
             self.screen.blit(icon, icon_rect)
             
-            name_text = self.font_small.render(upgrade.name, True, (0, 0, 0))
-            cost_text = self.font_small.render(f"{upgrade.cost}€", True, (0, 0, 0))
-            count_text = self.font_small.render(f"x{upgrade.count}", True, (0, 0, 0))
-            
+            # Textes
+            name_text = self.font_medium.render(upgrade.name, True, (0, 0, 0))  # Police plus grande
+            cost_text = self.font_small.render(f"Coût : {upgrade.cost}€", True, (0, 0, 0))
+            count_text = self.font_small.render(f"Niveau : {upgrade.count}", True, (0, 0, 0))
             productivity_text = self.font_small.render(
                 f"+{upgrade.productivity_boost:.1f}€/s",
                 True,
                 (0, 100, 0)
             )
             
-            self.screen.blit(name_text, (button.x + 50, button.y + 5))
-            self.screen.blit(cost_text, (button.x + 50, button.y + 25))
-            self.screen.blit(productivity_text, (button.x + 50, button.y + 45))
-            self.screen.blit(count_text, (button.right - 50, button.centery))
+            # Positionnement des textes avec plus d'espace
+            self.screen.blit(name_text, (button.x + 50, button.y + 10))
+            self.screen.blit(cost_text, (button.x + 50, button.y + 35))
+            self.screen.blit(productivity_text, (button.x + 50, button.y + 55))
+            self.screen.blit(count_text, (button.right - 100, button.centery))
 
     def draw_stats(self):
         pygame.draw.rect(self.screen, (240, 240, 240), self.stats_region)
