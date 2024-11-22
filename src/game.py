@@ -51,16 +51,30 @@ class BusinessClicker:
         self.active_events = []
         self.messages_queue = []
         
-        # Chargement des ressources et configuration UI
-        self.load_assets()
-        self.setup_ui()
-        
         # Animation et particules
         self.click_animation = False
         self.animation_frame = 0
         self.animation_max_frame = 10
         self.particles = []
         
+        self.music_volume = 0.5
+        self.sound_volume = 0.2
+        self.music_enabled = True
+        self.sound_enabled = True
+
+        # Menu de pause
+        self.paused = False
+        self.pause_menu_options = [
+            "Reprendre",
+            "Musique: On" if self.music_enabled else "Musique: Off",
+            "Sons: On" if self.sound_enabled else "Sons: Off",
+            "Volume +",
+            "Volume -",
+            "Quitter"
+        ]
+        self.selected_option = 0
+
+
         # Statistiques
         self.stats = {
             'total_clicks': 0,
@@ -68,8 +82,149 @@ class BusinessClicker:
             'total_upgrades_bought': 0
         }
         
-        # Charger la partie sauvegardée
+
+        # Chargement des ressources et configuration UI
+        self.load_assets()
+        self.setup_ui()
+        
+        self.load_music()
         self.load_game()
+
+
+    def load_music(self):
+        try:
+            pygame.mixer.music.load(os.path.join('assets', 'music', 'background_music.mp3'))
+            pygame.mixer.music.set_volume(self.music_volume)
+            if self.music_enabled:
+                pygame.mixer.music.play(-1)  # -1 pour loop infini
+        except:
+            print("Erreur lors du chargement de la musique")
+
+    def toggle_music(self):
+        self.music_enabled = not self.music_enabled
+        if self.music_enabled:
+            pygame.mixer.music.play(-1)
+        else:
+            pygame.mixer.music.stop()
+        
+        # Mettre à jour le texte du menu
+        self.pause_menu_options[1] = f"Musique: {'On' if self.music_enabled else 'Off'}"
+
+    def toggle_sound(self):
+        self.sound_enabled = not self.sound_enabled
+        if self.sound_enabled:
+            self.click_sound.set_volume(self.sound_volume)
+        else:
+            self.click_sound.set_volume(0)
+        
+        # Mettre à jour le texte du menu
+        self.pause_menu_options[2] = f"Sons: {'On' if self.sound_enabled else 'Off'}"
+
+    def adjust_volume(self, increase=True):
+        if increase:
+            self.music_volume = min(1.0, self.music_volume + 0.1)
+            self.sound_volume = min(1.0, self.sound_volume + 0.1)
+        else:
+            self.music_volume = max(0.0, self.music_volume - 0.1)
+            self.sound_volume = max(0.0, self.sound_volume - 0.1)
+        
+        pygame.mixer.music.set_volume(self.music_volume)
+        self.click_sound.set_volume(self.sound_volume if self.sound_enabled else 0)
+
+
+    def draw_pause_menu(self):
+        if not self.paused:
+            return
+        # Fond semi-transparent
+        overlay = pygame.Surface((self.width, self.height))
+        overlay.fill((0, 0, 0))
+        overlay.set_alpha(128)
+        self.screen.blit(overlay, (0, 0))
+        
+        # Titre du menu
+        title_text = self.font_large.render("PAUSE", True, (255, 255, 255))
+        title_rect = title_text.get_rect(center=(self.width // 2, self.height // 4))
+        self.screen.blit(title_text, title_rect)
+        
+        # Options du menu
+        for i, option in enumerate(self.pause_menu_options):
+            # Modification de la couleur si l'option est sélectionnée ou survolée
+            color = (255, 255, 0)  # Couleur par défaut pour l'option sélectionnée
+            if i == self.selected_option:
+                color = (255, 255, 0)  # Jaune pour l'option sélectionnée
+            else:
+                mouse_pos = pygame.mouse.get_pos()
+                option_rect = pygame.Rect(
+                    self.width // 2 - 100,
+                    self.height // 2 + i * 50 - 25,
+                    200,
+                    50
+                )
+                if option_rect.collidepoint(mouse_pos):
+                    color = (200, 200, 0)  # Jaune plus clair pour le survol
+                else:
+                    color = (255, 255, 255)  # Blanc pour les options non sélectionnées
+            
+            option_text = self.font_medium.render(option, True, color)
+            option_rect = option_text.get_rect(
+                center=(self.width // 2, self.height // 2 + i * 50)
+            )
+            self.screen.blit(option_text, option_rect)
+            
+        # Ajout d'instructions
+        instructions_text = self.font_small.render(
+            "Utilisez les flèches ↑↓ et Entrée, ou cliquez avec la souris",
+            True,
+            (200, 200, 200)
+        )
+        instructions_rect = instructions_text.get_rect(
+            center=(self.width // 2, self.height - 50)
+        )
+        self.screen.blit(instructions_text, instructions_rect)
+
+
+
+    def handle_pause_input(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.selected_option = (self.selected_option - 1) % len(self.pause_menu_options)
+            elif event.key == pygame.K_DOWN:
+                self.selected_option = (self.selected_option + 1) % len(self.pause_menu_options)
+            elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                self.execute_menu_option()
+        elif event.type == pygame.MOUSEBUTTONDOWN:  # Ajout du support de la souris
+            if event.button == 1:  # Clic gauche
+                mouse_pos = pygame.mouse.get_pos()
+                # Calcul de la position des options du menu
+                for i, option in enumerate(self.pause_menu_options):
+                    option_rect = pygame.Rect(
+                        self.width // 2 - 100,  # Position approximative des options
+                        self.height // 2 + i * 50 - 25,
+                        200,
+                        50
+                    )
+                    if option_rect.collidepoint(mouse_pos):
+                        self.selected_option = i
+                        self.execute_menu_option()
+
+
+    def execute_menu_option(self):
+        option = self.pause_menu_options[self.selected_option]
+        if option == "Reprendre":
+            self.paused = False
+            print("Reprendre")
+        elif option.startswith("Musique"):
+            self.toggle_music()
+        elif option.startswith("Sons"):
+            self.toggle_sound()
+        elif option == "Volume +":
+            self.adjust_volume(True)
+        elif option == "Volume -":
+            self.adjust_volume(False)
+        elif option == "Quitter":
+            self.save_game()
+            pygame.quit()
+            sys.exit()
 
     def initialize_upgrades(self) -> List[Upgrade]:
         return [
@@ -182,7 +337,7 @@ class BusinessClicker:
     def update_messages(self):
         current_time = pygame.time.get_ticks()
         self.messages_queue = [msg for msg in self.messages_queue 
-                             if current_time - msg['creation_time'] < msg['duration']]
+                            if current_time - msg['creation_time'] < msg['duration']][:5]
 
     def check_story_events(self):
         for event in self.story_events:
@@ -217,18 +372,26 @@ class BusinessClicker:
         )
 
     def create_particles(self, pos, count=5):
+        current_time = pygame.time.get_ticks()
+        gain_text = f"+{self.click_value * self.score_multiplier:.1f}€"
+        
+        new_particles = []
         for _ in range(count):
             angle = random.uniform(0, math.pi * 2)
             speed = random.uniform(2, 5)
+            vel = [math.cos(angle) * speed, math.sin(angle) * speed]
             lifetime = random.randint(20, 40)
-            gain_text = f"+{self.click_value * self.score_multiplier:.1f}€"
-            self.particles.append({
+            
+            new_particles.append({
                 'pos': list(pos),
-                'vel': [math.cos(angle) * speed, math.sin(angle) * speed],
+                'vel': vel,
                 'lifetime': lifetime,
                 'max_lifetime': lifetime,
                 'text': gain_text
             })
+        
+        self.particles.extend(new_particles)
+
 
     def update_particles(self):
         for particle in self.particles[:]:
@@ -281,19 +444,25 @@ class BusinessClicker:
 
     def update(self):
         current_time = pygame.time.get_ticks()
-        
         time_diff = (current_time - self.last_passive_update) / 1000.0
-        earned = self.passive_income * time_diff
-        self.money += earned
-        self.stats['total_money_earned'] += earned
-        self.last_passive_update = current_time
         
-        self.update_animation()
-        self.update_particles()
+        if time_diff > 0:  # Éviter les calculs inutiles
+            earned = self.passive_income * time_diff
+            self.money += earned
+            self.stats['total_money_earned'] += earned
+            self.last_passive_update = current_time
+        
+        if self.click_animation:
+            self.update_animation()
+        
+        if self.particles:
+            self.update_particles()
+            
         self.check_story_events()
         self.check_promotion()
         self.check_achievements()
         self.update_messages()
+
 
     def update_animation(self):
         if self.click_animation:
@@ -387,35 +556,26 @@ class BusinessClicker:
 
     def draw_upgrade_panel(self):
         pygame.draw.rect(self.screen, (240, 240, 240), self.upgrade_region)
-        
-        title_text = self.font_medium.render("Améliorations", True, (0, 0, 0))
-        self.screen.blit(title_text, (self.upgrade_region.x + 10, 50))
+        self.screen.blit(self.font_medium.render("Améliorations", True, (0, 0, 0)), 
+                        (self.upgrade_region.x + 10, 50))
         
         for button, upgrade in self.upgrade_buttons:
-            # Couleur de fond en fonction de la possibilité d'achat
             color = (200, 200, 200) if self.money >= upgrade.cost else (150, 150, 150)
             pygame.draw.rect(self.screen, color, button, border_radius=5)
             
-            # Icône
-            icon = self.upgrade_icons[upgrade.name]
-            icon_rect = icon.get_rect(midleft=(button.x + 10, button.centery))
-            self.screen.blit(icon, icon_rect)
+            self.screen.blit(self.upgrade_icons[upgrade.name], 
+                            self.upgrade_icons[upgrade.name].get_rect(midleft=(button.x + 10, button.centery)))
             
-            # Textes
-            name_text = self.font_medium.render(upgrade.name, True, (0, 0, 0))  # Police plus grande
-            cost_text = self.font_small.render(f"Coût : {upgrade.cost}€", True, (0, 0, 0))
-            count_text = self.font_small.render(f"Niveau : {upgrade.count}", True, (0, 0, 0))
-            productivity_text = self.font_small.render(
-                f"+{upgrade.productivity_boost:.1f}€/s",
-                True,
-                (0, 100, 0)
-            )
-            
-            # Positionnement des textes avec plus d'espace
-            self.screen.blit(name_text, (button.x + 50, button.y + 10))
-            self.screen.blit(cost_text, (button.x + 50, button.y + 35))
-            self.screen.blit(productivity_text, (button.x + 50, button.y + 55))
-            self.screen.blit(count_text, (button.right - 100, button.centery))
+            # Utilisation de f-strings pour de meilleures performances
+            self.screen.blit(self.font_medium.render(upgrade.name, True, (0, 0, 0)), 
+                            (button.x + 50, button.y + 10))
+            self.screen.blit(self.font_small.render(f"Coût : {upgrade.cost}€", True, (0, 0, 0)), 
+                            (button.x + 50, button.y + 35))
+            self.screen.blit(self.font_small.render(f"+{upgrade.productivity_boost:.1f}€/s", True, (0, 100, 0)), 
+                            (button.x + 50, button.y + 55))
+            self.screen.blit(self.font_small.render(f"Niveau : {upgrade.count}", True, (0, 0, 0)), 
+                            (button.right - 100, button.centery))
+
 
     def draw_stats(self):
         pygame.draw.rect(self.screen, (240, 240, 240), self.stats_region)
@@ -485,16 +645,22 @@ class BusinessClicker:
             'upgrades': [(u.name, u.count, u.cost) for u in self.upgrades],
             'current_position': self.current_position,
             'triggered_events': [event.triggered for event in self.story_events],
-            'achievements': [(a.title, a.unlocked) for a in self.achievements]
+            'achievements': [(a.title, a.unlocked) for a in self.achievements],
+            'music_enabled': self.music_enabled,
+            'sound_enabled': self.sound_enabled,
+            'music_volume': self.music_volume,
+            'sound_volume': self.sound_volume
         }
-        with open('sauvegarde.json', 'w') as f:
-            json.dump(save_data, f)
+        try:
+            with open('sauvegarde.json', 'w') as f:
+                json.dump(save_data, f)
+        except:
+            print("Erreur lors de la sauvegarde")
 
     def load_game(self):
         try:
             with open('sauvegarde.json', 'r') as f:
                 data = json.load(f)
-
                 self.money = data['money']
                 self.click_value = data['click_value']
                 self.passive_income = data['passive_income']
@@ -513,6 +679,20 @@ class BusinessClicker:
                 # Charger les achievements
                 for (title, unlocked), achievement in zip(data.get('achievements', []), self.achievements):
                     achievement.unlocked = unlocked
+                
+                self.music_enabled = data.get('music_enabled', True)
+                self.sound_enabled = data.get('sound_enabled', True)
+                self.music_volume = data.get('music_volume', 0.5)
+                self.sound_volume = data.get('sound_volume', 0.2)
+                
+                # Appliquer les préférences audio
+                if not self.music_enabled:
+                    pygame.mixer.music.stop()
+                if not self.sound_enabled:
+                    self.click_sound.set_volume(0)
+                else:
+                    self.click_sound.set_volume(self.sound_volume)
+                pygame.mixer.music.set_volume(self.music_volume)
 
         except FileNotFoundError:
             pass  # Pas de sauvegarde existante
@@ -522,24 +702,50 @@ class BusinessClicker:
         running = True
         
         while running:
+            # Gestion des événements
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        running = False
+                        self.paused = not self.paused  # Toggle pause state
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Clic gauche
+                    if not self.paused and event.button == 1:
                         self.handle_click(event.pos)
+                
+                # Gérer les entrées du menu pause si le jeu est en pause
+                if self.paused:
+                    self.handle_pause_input(event)
             
-            self.update()
-            self.draw()
+            # Clear the screen once
+            self.screen.blit(self.background, (0, 0))
+            
+            # Mise à jour du jeu si pas en pause
+            if not self.paused:
+                self.update()
+                self.screen.blit(self.document, self.document_rect)
+                self.draw_upgrade_panel()
+                self.draw_stats()
+                self.draw_particles()
+                self.draw_messages()
+            else:
+                # When paused, draw the game state without updates
+                self.screen.blit(self.document, self.document_rect)
+                self.draw_upgrade_panel()
+                self.draw_stats()
+                self.draw_messages()
+                # Draw pause menu on top
+                self.draw_pause_menu()
+            
+            # Single display update per frame
+            pygame.display.flip()
             clock.tick(60)
         
-        # Sauvegarder avant de quitter
+        # Sauvegarde et sortie
         self.save_game()
         pygame.quit()
         sys.exit()
+
 
 if __name__ == "__main__":
     game = BusinessClicker()
