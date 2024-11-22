@@ -104,51 +104,51 @@ class BusinessClicker:
         return [
             StoryEvent(
                 "Premier Jour",
-                "Bienvenue dans l'entreprise ! On vous a assigné un bureau avec un ordinateur qui tourne sous Windows 95.",
+                "Bienvenue dans l'entreprise ! On vous a assigné un bureau avec un ordinateur qui tourne sous Windows 95. Le chef vous rappelle gentiment qu'il faut remplir la feuille de présence tous les matins.",
                 0, "money"
             ),
             StoryEvent(
                 "Premier Café",
-                "Vous découvrez la machine à café. La pause de 10h ne sera plus jamais la même !",
+                "Vous découvrez la machine à café. La pause de 10h ne sera plus jamais la même ! Les collègues vous initient au sacro-saint rituel du café-clope-potins.",
                 10, "money"
             ),
             StoryEvent(
                 "Premier Salaire",
-                "Votre premier salaire ! Maintenant vous pouvez vous acheter des sandwichs à la cafétéria.",
+                "Votre premier salaire ! Maintenant vous pouvez vous acheter des sandwichs à la cafétéria. Plus besoin de manger des pâtes tous les midis.",
                 100, "money"
             ),
             StoryEvent(
                 "La Routine",
-                "Vous commencez à maîtriser l'art de paraître occupé pendant les heures creuses.",
+                "Vous commencez à maîtriser l'art de paraître occupé pendant les heures creuses. Votre technique de la double fenêtre Excel-Facebook est maintenant au point.",
                 50, "clicks"
             ),
             StoryEvent(
                 "Expert Excel",
-                "Vous savez maintenant faire des tableaux croisés dynamiques. Vos collègues vous regardent différemment.",
+                "Vous savez maintenant faire des tableaux croisés dynamiques. Vos collègues vous regardent différemment. Le stagiaire vous demande même des conseils !",
                 200, "clicks"
             ),
             StoryEvent(
                 "Première Réunion",
-                "Vous êtes invité à une réunion qui aurait pu être un email. Bienvenue dans le monde de l'entreprise !",
+                "Vous êtes invité à une réunion qui aurait pu être un email. Mais vous avez découvert où se cachaient les meilleurs gâteaux de la salle de pause !",
                 3, "upgrades"
             ),
             StoryEvent(
                 "Maître du Café",
-                "Les gens viennent maintenant de l'autre bout du bâtiment pour votre café. Vous êtes une légende.",
+                "Les gens viennent maintenant de l'autre bout du bâtiment pour votre café. Vous êtes une légende vivante de la pause café. Même le DRH vous demande votre secret.",
                 5, "upgrades"
             ),
-            # Événements de promotion
             StoryEvent(
                 "Promotion : Assistant",
-                "Félicitations ! Vous êtes promu Assistant. Vous avez maintenant accès à la grande imprimante.",
+                "Félicitations ! Vous êtes promu Assistant. Vous avez maintenant accès à la grande imprimante et aux fournitures de bureau premium. Les Post-it de luxe, ça change la vie !",
                 100, "money"
             ),
             StoryEvent(
                 "Promotion : Chargé de Mission",
-                "Vous êtes maintenant Chargé de Mission ! On vous a donné un badge pour la salle de réunion VIP.",
+                "Vous êtes maintenant Chargé de Mission ! On vous a donné un badge pour la salle de réunion VIP et une place de parking presque couverte. La classe !",
                 500, "money"
-            ),
+            )
         ]
+
 
     def check_promotion(self):
         for position, threshold in sorted(self.promotion_levels.items(), key=lambda x: x[1]):
@@ -161,13 +161,60 @@ class BusinessClicker:
                 return True
         return False
 
-    def add_message(self, title, description, duration=5000):
-        self.messages_queue.append({
+    def add_message(self, title, description, duration=5000, priority='normal'):
+        current_time = pygame.time.get_ticks()
+        
+        # Définir les durées selon le type de message
+        if priority == 'story':
+            duration = 10000  # 10 secondes pour les messages d'histoire
+        elif priority == 'random':
+            duration = 3000   # 3 secondes pour les messages aléatoires
+            
+            # Vérifier si un message aléatoire est déjà en cours
+            for msg in self.messages_queue:
+                if msg['priority'] == 'random' and \
+                   current_time - msg['creation_time'] < msg['duration']:
+                    return  # Ne pas ajouter de nouveau message aléatoire
+        
+        # Vérifier les doublons
+        for msg in self.messages_queue:
+            if msg['title'] == title and msg['description'] == description:
+                return
+                
+        new_message = {
             'title': title,
             'description': description,
-            'creation_time': pygame.time.get_ticks(),
-            'duration': duration
-        })
+            'creation_time': current_time,
+            'duration': duration,
+            'priority': priority
+        }
+        
+        # Gérer la priorité dans la queue
+        if priority == 'story':
+            # Les messages d'histoire sont toujours ajoutés
+            self.messages_queue.append(new_message)
+        elif priority == 'random':
+            # Supprimer les anciens messages aléatoires
+            self.messages_queue = [msg for msg in self.messages_queue 
+                                 if msg['priority'] != 'random']
+            self.messages_queue.append(new_message)
+            
+        # Limiter la taille de la queue
+        if len(self.messages_queue) > 5:
+            # Garder les messages d'histoire prioritaires
+            story_messages = [msg for msg in self.messages_queue 
+                            if msg['priority'] == 'story']
+            other_messages = [msg for msg in self.messages_queue 
+                            if msg['priority'] != 'story']
+            
+            while len(story_messages) + len(other_messages) > 5:
+                if other_messages:
+                    other_messages.pop(0)
+                elif story_messages:
+                    story_messages.pop(0)
+                    
+            self.messages_queue = story_messages + other_messages
+
 
     def update_messages(self):
         current_time = pygame.time.get_ticks()
@@ -179,13 +226,13 @@ class BusinessClicker:
             if not event.triggered:
                 if event.event_type == 'money' and self.money >= event.trigger_value:
                     event.triggered = True
-                    self.add_message(event.title, event.description)
+                    self.add_message(event.title, event.description, priority='story')
                 elif event.event_type == 'clicks' and self.stats['total_clicks'] >= event.trigger_value:
                     event.triggered = True
-                    self.add_message(event.title, event.description)
+                    self.add_message(event.title, event.description, priority='story')
                 elif event.event_type == 'upgrades' and self.stats['total_upgrades_bought'] >= event.trigger_value:
                     event.triggered = True
-                    self.add_message(event.title, event.description)
+                    self.add_message(event.title, event.description, priority='story')
 
     def load_assets(self):
         # Même code que précédemment pour le chargement des assets
@@ -248,8 +295,6 @@ class BusinessClicker:
                 self.particles.remove(particle)
 
     def handle_click(self, pos):
-        current_time = pygame.time.get_ticks()
-        
         if self.document_rect.collidepoint(pos):
             self.money += self.click_value
             self.stats['total_clicks'] += 1
@@ -262,43 +307,92 @@ class BusinessClicker:
             channel = mixer.find_channel(True)
             if channel:
                 channel.play(self.click_sound, maxtime=500)
-            if random.random() < 0.1:  # 10% de chance d'avoir un message
-                self.add_message("", random.choice(self.click_messages), 2000)
+            
+            # Messages aléatoires avec une plus faible probabilité
+            if random.random() < 0.05:  # 5% de chance au lieu de 10%
+                self.add_message("", random.choice(self.click_messages), priority='random')
         
         for button, upgrade in self.upgrade_buttons:
             if button.collidepoint(pos):
                 self.try_purchase_upgrade(upgrade)
+
                 
     def draw_messages(self):
         if not self.messages_queue:
             return
 
-        # Dessiner le dernier message de la queue
         msg = self.messages_queue[-1]
         margin = 20
         padding = 10
+        max_width = 800  # Largeur maximale augmentée
         
-        # Calculer la position et la taille du message
-        msg_surface = pygame.Surface((400, 100))
+        def wrap_text(text, font, max_width):
+            words = text.split(' ')
+            lines = []
+            current_line = []
+            current_width = 0
+            
+            for word in words:
+                word_surface = font.render(word + ' ', True, (0, 0, 0))
+                word_width = word_surface.get_width()
+                
+                if current_width + word_width <= max_width:
+                    current_line.append(word)
+                    current_width += word_width
+                else:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                    current_width = word_width
+            
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            return lines
+        
+        # Calculer la hauteur nécessaire pour le message
+        title_height = self.font_medium.get_linesize() if msg['title'] else 0
+        desc_lines = wrap_text(msg['description'], self.font_small, max_width - 2 * padding)
+        desc_height = len(desc_lines) * self.font_small.get_linesize()
+        
+        total_height = padding * 2 + title_height + desc_height
+        
+        # Créer la surface du message
+        msg_surface = pygame.Surface((max_width, total_height))
         msg_surface.fill((240, 240, 240))
-        msg_rect = msg_surface.get_rect(topright=(self.width - margin, margin))
         
-        # Ajouter un effet de transparence basé sur le temps restant
+        # Centrer en bas de l'écran
+        msg_rect = msg_surface.get_rect(midbottom=(self.width // 2, self.height - margin))
+        
+        # Effet de transparence avec une durée différente selon le type de message
         elapsed = pygame.time.get_ticks() - msg['creation_time']
         alpha = max(0, min(255, int(255 * (1 - elapsed / msg['duration']))))
         msg_surface.set_alpha(alpha)
         
-        # Dessiner le titre et la description
+        # Style différent selon le type de message
+        if msg['priority'] == 'story':
+            border_color = (100, 150, 255)  # Bleu pour les messages d'histoire
+            title_color = (0, 0, 150)
+        else:
+            border_color = (200, 200, 200)  # Gris pour les messages normaux
+            title_color = (0, 0, 0)
+        
+        # Dessiner le titre
+        current_y = padding
         if msg['title']:
-            title_text = self.font_medium.render(msg['title'], True, (0, 0, 0))
-            msg_surface.blit(title_text, (padding, padding))
-            
-        desc_text = self.font_small.render(msg['description'], True, (50, 50, 50))
-        msg_surface.blit(desc_text, (padding, 40))
+            title_text = self.font_medium.render(msg['title'], True, title_color)
+            msg_surface.blit(title_text, (padding, current_y))
+            current_y += title_height + 5
         
-        # Ajouter une bordure
-        pygame.draw.rect(msg_surface, (200, 200, 200), msg_surface.get_rect(), 2)
+        # Dessiner chaque ligne de la description
+        for line in desc_lines:
+            line_text = self.font_small.render(line, True, (50, 50, 50))
+            msg_surface.blit(line_text, (padding, current_y))
+            current_y += self.font_small.get_linesize()
         
+        # Ajouter une bordure avec la couleur appropriée
+        pygame.draw.rect(msg_surface, border_color, msg_surface.get_rect(), 2)
+        
+        # Afficher le message
         self.screen.blit(msg_surface, msg_rect)
 
     def try_purchase_upgrade(self, upgrade):
