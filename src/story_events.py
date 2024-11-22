@@ -30,7 +30,7 @@ def initialize_story_events():
         StoryEvent(
             "La Routine",
             "Vous commencez à maîtriser l'art de paraître occupé pendant les heures creuses. Votre technique de la double fenêtre Excel-Facebook est maintenant au point.",
-            50,
+            100,
             "clicks"
         ),
         StoryEvent(
@@ -48,19 +48,43 @@ def initialize_story_events():
         StoryEvent(
             "Maître du Café",
             "Les gens viennent maintenant de l'autre bout du bâtiment pour votre café. Vous êtes une légende vivante de la pause café. Même le DRH vous demande votre secret.",
-            5,
+            8,
             "upgrades"
         ),
         StoryEvent(
             "Promotion : Assistant",
             "Félicitations ! Vous êtes promu Assistant. Vous avez maintenant accès à la grande imprimante et aux fournitures de bureau premium. Les Post-it de luxe, ça change la vie !",
-            100,
+            200,
             "money"
         ),
         StoryEvent(
             "Promotion : Chargé de Mission",
             "Vous êtes maintenant Chargé de Mission ! On vous a donné un badge pour la salle de réunion VIP et une place de parking presque couverte. La classe !",
             500,
+            "money"
+        ),
+        StoryEvent(
+            "Promotion : Chef de Projet",
+            "Vous êtes maintenant Chef de Projet ! Votre équipe vous respecte. Vous avez accès au distributeur de snacks de luxe et aux toilettes VIP.",
+            2000,
+            "money"
+        ),
+        StoryEvent(
+            "Promotion : Directeur Adjoint",
+            "Vous êtes maintenant Directeur Adjoint ! On vous a donné une secrétaire personnelle et une place de parking couverte. Les affaires sont sérieuses.",
+            5000,
+            "money"
+        ),
+        StoryEvent(
+            "Promotion : Directeur",
+            "Vous êtes maintenant Directeur ! On vous a offert un fauteuil de direction. Les gens se lèvent quand vous entrez dans la salle de réunion.",
+            10000,
+            "money"
+        ),
+        StoryEvent(
+            "Promotion : PDG",
+            "Vous êtes maintenant PDG ! On vous a offert un jet privé. Les décisions sont maintenant prises dans votre tour d'ivoire.",
+            50000,
             "money"
         )
     ]

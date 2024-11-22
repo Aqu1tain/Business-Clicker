@@ -1,6 +1,6 @@
 PROMOTION_LEVELS = {
     "Stagiaire": 0,
-    "Assistant": 100,
+    "Assistant": 200,
     "Chargé de Mission": 500,
     "Chef de Projet": 2000,
     "Directeur Adjoint": 5000,
@@ -16,5 +16,17 @@ CLICK_MESSAGES = [
     "Ça sent la promotion",
     "La routine, quoi",
     "Pas mal du tout",
-    "C'est du bon boulot"
+    "C'est du bon boulot",
+    "C'est pas mal",
+    "C'est pas mal du tout",
+    "On continue comme ça",
+    "Travail efficace",
+    "C'est presque fini",
+    "Le progrès est là",
+    "Toujours plus loin",
+    "On garde le rythme",
+    "On ne lâche rien",
+    "Toujours en avant",
+    "Une tâche de plus",
+    "Bien joué !"
 ]
