@@ -137,7 +137,7 @@ class BusinessClicker:
         self.screen.blit(overlay, (0, 0))
         
         # Titre du menu
-        title_text = self.font_large.render("BUSINES SCLICKER", True, (255, 255, 255))
+        title_text = self.font_large.render("BUSINESS SCLICKER", True, (255, 255, 255))
         title_rect = title_text.get_rect(center=(self.width // 2, self.height // 4))
         self.screen.blit(title_text, title_rect)
         
