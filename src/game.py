@@ -9,6 +9,16 @@ from typing import List, Dict
 import json
 from models import Upgrade
 
+class StoryEvent:
+    def __init__(self, title, description, trigger_value, event_type='money'):
+        self.title = title
+        self.description = description
+        self.trigger_value = trigger_value
+        self.event_type = event_type  # 'money', 'clicks', 'upgrades'
+        self.triggered = False
+        self.display_time = None
+        self.display_duration = 5000  # 5 secondes
+
 class BusinessClicker:
     def __init__(self):
         pygame.init()
@@ -51,6 +61,32 @@ class BusinessClicker:
             'total_money_earned': 0,
             'total_upgrades_bought': 0
         }
+
+        self.story_events = self.initialize_story_events()
+        self.active_events = []
+        self.messages_queue = []
+        self.current_position = "Stagiaire"
+        self.promotion_levels = {
+            "Stagiaire": 0,
+            "Assistant": 100,
+            "Chargé de Mission": 500,
+            "Chef de Projet": 2000,
+            "Directeur Adjoint": 5000,
+            "Directeur": 10000,
+            "PDG": 50000
+        }
+
+
+        self.click_messages = [
+            "Encore un dossier de traité !",
+            "La machine est bien huilée",
+            "Un de plus pour la boîte",
+            "Le patron va être content",
+            "Ça sent la promotion",
+            "La routine, quoi",
+            "Pas mal du tout",
+            "C'est du bon boulot",
+        ]
         
         # Charger la partie sauvegardée si elle existe
         self.load_game()
@@ -63,7 +99,94 @@ class BusinessClicker:
             Upgrade("Scanner Automatique", 1000, 10, "Scanne les documents tout seul"),
             Upgrade("Assistant IA", 5000, 50, "Productivité nouvelle génération")
         ]
-    
+
+    def initialize_story_events(self):
+        return [
+            StoryEvent(
+                "Premier Jour",
+                "Bienvenue dans l'entreprise ! On vous a assigné un bureau avec un ordinateur qui tourne sous Windows 95.",
+                0, "money"
+            ),
+            StoryEvent(
+                "Premier Café",
+                "Vous découvrez la machine à café. La pause de 10h ne sera plus jamais la même !",
+                10, "money"
+            ),
+            StoryEvent(
+                "Premier Salaire",
+                "Votre premier salaire ! Maintenant vous pouvez vous acheter des sandwichs à la cafétéria.",
+                100, "money"
+            ),
+            StoryEvent(
+                "La Routine",
+                "Vous commencez à maîtriser l'art de paraître occupé pendant les heures creuses.",
+                50, "clicks"
+            ),
+            StoryEvent(
+                "Expert Excel",
+                "Vous savez maintenant faire des tableaux croisés dynamiques. Vos collègues vous regardent différemment.",
+                200, "clicks"
+            ),
+            StoryEvent(
+                "Première Réunion",
+                "Vous êtes invité à une réunion qui aurait pu être un email. Bienvenue dans le monde de l'entreprise !",
+                3, "upgrades"
+            ),
+            StoryEvent(
+                "Maître du Café",
+                "Les gens viennent maintenant de l'autre bout du bâtiment pour votre café. Vous êtes une légende.",
+                5, "upgrades"
+            ),
+            # Événements de promotion
+            StoryEvent(
+                "Promotion : Assistant",
+                "Félicitations ! Vous êtes promu Assistant. Vous avez maintenant accès à la grande imprimante.",
+                100, "money"
+            ),
+            StoryEvent(
+                "Promotion : Chargé de Mission",
+                "Vous êtes maintenant Chargé de Mission ! On vous a donné un badge pour la salle de réunion VIP.",
+                500, "money"
+            ),
+        ]
+
+    def check_promotion(self):
+        for position, threshold in sorted(self.promotion_levels.items(), key=lambda x: x[1]):
+            if self.money >= threshold and position != self.current_position:
+                self.current_position = position
+                self.add_message(
+                    f"Promotion !",
+                    f"Félicitations ! Vous êtes promu {position}. Nouveaux avantages débloqués !"
+                )
+                return True
+        return False
+
+    def add_message(self, title, description, duration=5000):
+        self.messages_queue.append({
+            'title': title,
+            'description': description,
+            'creation_time': pygame.time.get_ticks(),
+            'duration': duration
+        })
+
+    def update_messages(self):
+        current_time = pygame.time.get_ticks()
+        self.messages_queue = [msg for msg in self.messages_queue 
+                             if current_time - msg['creation_time'] < msg['duration']]
+
+    def check_story_events(self):
+        for event in self.story_events:
+            if not event.triggered:
+                if event.event_type == 'money' and self.money >= event.trigger_value:
+                    event.triggered = True
+                    self.add_message(event.title, event.description)
+                elif event.event_type == 'clicks' and self.stats['total_clicks'] >= event.trigger_value:
+                    event.triggered = True
+                    self.add_message(event.title, event.description)
+                elif event.event_type == 'upgrades' and self.stats['total_upgrades_bought'] >= event.trigger_value:
+                    event.triggered = True
+                    self.add_message(event.title, event.description)
+
     def load_assets(self):
         # Même code que précédemment pour le chargement des assets
         self.background = pygame.image.load(os.path.join('assets', 'images', 'office_background.png'))
@@ -139,11 +262,45 @@ class BusinessClicker:
             channel = mixer.find_channel(True)
             if channel:
                 channel.play(self.click_sound, maxtime=500)
+            if random.random() < 0.1:  # 10% de chance d'avoir un message
+                self.add_message("", random.choice(self.click_messages), 2000)
         
         for button, upgrade in self.upgrade_buttons:
             if button.collidepoint(pos):
                 self.try_purchase_upgrade(upgrade)
                 
+    def draw_messages(self):
+        if not self.messages_queue:
+            return
+
+        # Dessiner le dernier message de la queue
+        msg = self.messages_queue[-1]
+        margin = 20
+        padding = 10
+        
+        # Calculer la position et la taille du message
+        msg_surface = pygame.Surface((400, 100))
+        msg_surface.fill((240, 240, 240))
+        msg_rect = msg_surface.get_rect(topright=(self.width - margin, margin))
+        
+        # Ajouter un effet de transparence basé sur le temps restant
+        elapsed = pygame.time.get_ticks() - msg['creation_time']
+        alpha = max(0, min(255, int(255 * (1 - elapsed / msg['duration']))))
+        msg_surface.set_alpha(alpha)
+        
+        # Dessiner le titre et la description
+        if msg['title']:
+            title_text = self.font_medium.render(msg['title'], True, (0, 0, 0))
+            msg_surface.blit(title_text, (padding, padding))
+            
+        desc_text = self.font_small.render(msg['description'], True, (50, 50, 50))
+        msg_surface.blit(desc_text, (padding, 40))
+        
+        # Ajouter une bordure
+        pygame.draw.rect(msg_surface, (200, 200, 200), msg_surface.get_rect(), 2)
+        
+        self.screen.blit(msg_surface, msg_rect)
+
     def try_purchase_upgrade(self, upgrade):
         if self.money >= upgrade.cost:
             self.money -= upgrade.cost
@@ -164,6 +321,9 @@ class BusinessClicker:
         
         self.update_animation()
         self.update_particles()
+        self.check_story_events()
+        self.check_promotion()
+        self.update_messages()
 
     def update_animation(self):
         if self.click_animation:
@@ -235,6 +395,9 @@ class BusinessClicker:
         self.screen.blit(money_earned_text, (20, stats_y + 25))
         self.screen.blit(upgrades_text, (20, stats_y + 50))
 
+        position_text = self.font_medium.render(f"Poste : {self.current_position}", True, (0, 0, 0))
+        self.screen.blit(position_text, (20, 120))
+
     def draw_particles(self):
         for particle in self.particles:
             alpha = int(255 * (particle['lifetime'] / particle['max_lifetime']))
@@ -248,7 +411,9 @@ class BusinessClicker:
         self.draw_upgrade_panel()
         self.draw_stats()
         self.draw_particles()
+        self.draw_messages()
         pygame.display.flip()
+    
 
     def save_game(self):
         save_data = {
@@ -256,9 +421,10 @@ class BusinessClicker:
             'click_value': self.click_value,
             'passive_income': self.passive_income,
             'stats': self.stats,
-            'upgrades': [(u.name, u.count, u.cost) for u in self.upgrades]
+            'upgrades': [(u.name, u.count, u.cost) for u in self.upgrades],
+            'current_position': self.current_position,
+            'triggered_events': [event.triggered for event in self.story_events]
         }
-        
         with open('sauvegarde.json', 'w') as f:
             json.dump(save_data, f)
 
@@ -266,11 +432,15 @@ class BusinessClicker:
         try:
             with open('sauvegarde.json', 'r') as f:
                 data = json.load(f)
+
                 self.money = data['money']
                 self.click_value = data['click_value']
                 self.passive_income = data['passive_income']
                 self.stats = data['stats']
-                
+                self.current_position = data.get('current_position', "Stagiaire")
+                for event, triggered in zip(self.story_events, data.get('triggered_events', [])):
+                    event.triggered = triggered
+
                 for (name, count, cost), upgrade in zip(data['upgrades'], self.upgrades):
                     upgrade.count = count
                     upgrade.cost = cost
