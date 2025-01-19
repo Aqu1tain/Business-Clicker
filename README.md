@@ -1,3 +1,17 @@
+<div align="center">
+
+# ════ ACADEMIC PROJECT ════
+
+###  Business Clicker 📈
+
+**⟦** <a href="https://www.supdevinci.fr/" target="_blank">SUP DE VINCI</a> **⟧** 
+
+*Bachelor's Degree*
+
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+</div>
+
 # Business Clicker 📈
 
 Un jeu de type "clicker" inspiré de la vie de bureau, développé avec Python et Pygame. Gravissez les échelons de l'entreprise en cliquant sur des documents et en gérant vos ressources !
